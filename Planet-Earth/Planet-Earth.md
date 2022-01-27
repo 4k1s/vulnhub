@@ -44,5 +44,31 @@ $ echo $TRG
 
 Perfect. We are ready to start. As always, there are four basic "steps". Enumeration, Foothold, User access and finally root/admin access (or privileges escalation).
 
-### Enumaration
+### Enumeration
 
+Let's start with a basic port scan.
+
+```
+$ sudo nmap $TRG -sS
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-01-27 03:16 EST
+Nmap scan report for earth.local (10.0.2.7)
+Host is up (0.00048s latency).
+Not shown: 997 filtered ports
+PORT    STATE SERVICE
+22/tcp  open  ssh
+80/tcp  open  http
+443/tcp open  https
+MAC Address: 08:00:27:80:91:15 (Oracle VirtualBox virtual NIC)
+
+Nmap done: 1 IP address (1 host up) scanned in 5.22 seconds
+
+```
+
+*sudo* is needed because flag -sS does a TCP SYN port scan, which needs root privileges. If you don't have root privileges(vary rare, as you usually fully own the attacking machine) you can port scan using the *-sT* flag. SYN port scan is faster though, as it does not attempt a complete TCP connection but sends raw packages(that's why it needs root privileges).
+
+By default, 1000 ports were scanned. 3 open ports found, while 997 are filtered. This means that a firewall is running on the target machine. For these 997 filtered ports we don't know if a daemon is running at some of them or they are really closed. There are techniques to find out but better to start spending our time on the open ports first.
+
+### Foothold
+
+
+ 
