@@ -1,4 +1,4 @@
-# Attack on the box ""The Planets: Earth"
+# Attack on the box "The Planets: Earth"
 
 Target box: [click here](https://www.vulnhub.com/entry/the-planets-earth,755/)
 
@@ -70,5 +70,52 @@ By default, 1000 ports were scanned. 3 open ports found, while 997 are filtered.
 
 ### Foothold
 
+It is time to start exploring the open ports and see what other information we can get to set a foot on the target. It will be wise to forget about ssh(port 22), as we don't have any credentials. Http and https are open for as though. Let's try to access http service using our browser. We type 'http://10.0.2.7' in our favorite browser but we get a 400 error code (but request). Another way is to use *wget* or *curl* to access the $TRG ip but the result will be, of course, the same. Not a good start.
 
+Trying the same on https port (https://10.0.2.7) we get a Fedora Webserver Test Page, as it can be seen:
+
+ ![](img/image1.png)
+
+That means that a webserver is running(expected because of the open ports) and is misconfigured. It shouldn't show any kind of data to the public. That's good news for the bad guys(us, the red team). It is reasonable to assume that at least a virtual host exists. We are going to use *nmap* again with standard NSE Scripts (*-sC* flag). We also use the *-vv* flag to get more details:
+
+```
+$ nmap -p443 10.0.2.7 -sC -vv
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-01-27 04:14 EST
+NSE: Loaded 121 scripts for scanning.
+............
+```
+
+We don't provide the output here. The output contains an SSL certificate and other info about two domain names. Let's rerun the command without *-vv* flag.
+
+```
+$ nmap -p443 10.0.2.7 -sC
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-01-27 04:15 EST
+Nmap scan report for earth.local (10.0.2.7)
+Host is up (0.0012s latency).
+
+PORT    STATE SERVICE
+443/tcp open  https
+|_http-title: Earth Secure Messaging
+| ssl-cert: Subject: commonName=earth.local/stateOrProvinceName=Space
+| Subject Alternative Name: DNS:earth.local, DNS:terratest.earth.local
+| Not valid before: 2021-10-12T23:26:31
+|_Not valid after:  2031-10-10T23:26:31
+| tls-alpn: 
+|_  http/1.1
+
+Nmap done: 1 IP address (1 host up) scanned in 1.39 seconds
+
+```
+
+We have two domain names, "earth.local" and "terratest.earth.local". Obviously, these are temporal domain names and DNS records do not exist for them. An SSL certificate has been taken for them, so they meant to be used in the future in public. We can be almost sure that the web server has configured with two virtual hosts by using these domain names. Or one virtual host with a domain name and the other as an alias.
  
+As there are no DNS records for these domains we can fool the browser by providing A records only for our machine. before a DNS lookup linux systems search the */etc/hosts* file. We can open it as root with an editor and add the following line:
+
+```
+10.0.2.7		earth.local	terratest.earth.local
+```
+
+Let's try again to browse the two domains. They both show the same webpage for http, while for https the subdomain (terratest.earth.local) shows a "Test site, please ignore." text message. Lets focus on http://earth.local:
+
+![](img/image2.png)
+
