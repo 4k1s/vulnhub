@@ -107,9 +107,9 @@ Nmap done: 1 IP address (1 host up) scanned in 1.39 seconds
 
 ```
 
-We have two domain names, "earth.local" and "terratest.earth.local". Obviously, these are temporal domain names and DNS records do not exist for them. An SSL certificate has been taken for them, so they meant to be used in the future in public. We can be almost sure that the web server has configured with two virtual hosts by using these domain names. Or one virtual host with a domain name and the other as an alias.
+We have two domain names, "earth.local" and "terratest.earth.local". Obviously, these are temporal domain names and DNS records do not exist for them. An SSL certificate has been taken for them, so they meant to be used in the future in public. We can be almost sure that the web server has been configured with two virtual hosts by using these domain names. Or one virtual host with a domain name and the other as an alias.
  
-As there are no DNS records for these domains we can fool the browser by providing A records only for our machine. before a DNS lookup linux systems search the */etc/hosts* file. We can open it as root with an editor and add the following line:
+As there are no DNS records for these domains we can fool the browser by providing A records only for our machine. Before a DNS lookup takes place linux systems search the */etc/hosts* file. We can open it as root with an editor and add the following line:
 
 ```
 10.0.2.7		earth.local	terratest.earth.local
@@ -118,4 +118,160 @@ As there are no DNS records for these domains we can fool the browser by providi
 Let's try again to browse the two domains. They both show the same webpage for http, while for https the subdomain (terratest.earth.local) shows a "Test site, please ignore." text message. Lets focus on http://earth.local:
 
 ![](img/image2.png)
+
+By visiting the site we can see that we can create encoded messages after we provide a message and a message key. These encoded messages are persistent between sessions(we can see that if we use a different browser or clear our browser storage, so it is not a local thing). It is almost sure that a database is running. Let's try mySQL default port first.
+
+```
+$ nmap -p3306 $TRG -sC
+Starting Nmap 7.80 ( https://nmap.org ) at 2022-01-27 05:39 EST
+Nmap scan report for earth.local (10.0.2.7)
+Host is up (0.00082s latency).
+
+PORT     STATE    SERVICE
+3306/tcp filtered mysql
+
+Nmap done: 1 IP address (1 host up) scanned in 0.53 seconds
+```
+
+Our guess proved correct, a mysql server is running on default port(3306). Notice the STATE, it is filtered, so it is running behind a firewall. That means that we can't access it directly. Good for the target, bad for us. We must try something else...
+
+```
+$ gobuster -u https://earth.local/ -w /usr/share/wordlists/KaliLists/dirb/common.txt -k
+
+=====================================================
+Gobuster v2.0.1              OJ Reeves (@TheColonial)
+=====================================================
+[+] Mode         : dir
+[+] Url/Domain   : https://earth.local/
+[+] Threads      : 10
+[+] Wordlist     : /usr/share/wordlists/KaliLists/dirb/common.txt
+[+] Status codes : 200,204,301,302,307,403
+[+] Timeout      : 10s
+=====================================================
+2022/01/27 23:17:10 Starting gobuster
+=====================================================
+/admin (Status: 301)
+/cgi-bin/ (Status: 403)
+=====================================================
+2022/01/27 23:17:33 Finished
+=====================================================
+
+```
+
+*-w* flag just specifies the path of the text file, which contains common words to check as filenames or dirnames. *-k* flag is to ignore SSL cert (else we'll get an error). The larger the text file, the most probable to find many files, in the expense of time. On real targets a large text file may slow down or even bring down the server, so we must be careful. Better start with common.txt, which contains the most common file/dir names and also has a small size.
+
+We got something useful, /admin. Navigating to https://earth.local/admin we can't avoid noticing that this is an admin comman toll interface. That's great news. Unfortunately we must login, but we don't know the credentials. Hmm...
+
+More enumeration never hurts. Lets run gobuster to the subdomain:
+
+```
+$ gobuster -u https://terratest.earth.local/ -w /usr/share/wordlists/KaliLists/dirb/common.txt -k
+
+=====================================================
+Gobuster v2.0.1              OJ Reeves (@TheColonial)
+=====================================================
+[+] Mode         : dir
+[+] Url/Domain   : https://terratest.earth.local/
+[+] Threads      : 10
+[+] Wordlist     : /usr/share/wordlists/KaliLists/dirb/common.txt
+[+] Status codes : 200,204,301,302,307,403
+[+] Timeout      : 10s
+=====================================================
+2022/01/28 01:43:29 Starting gobuster
+=====================================================
+/.hta (Status: 403)
+/.htaccess (Status: 403)
+/.htpasswd (Status: 403)
+/cgi-bin/ (Status: 403)
+/index.html (Status: 200)
+/robots.txt (Status: 200)
+=====================================================
+2022/01/28 01:43:48 Finished
+=====================================================
+```
+
+I know, you are already eyeing the .hta* files. But the status code for all of them is 403, which means that we don't have access. *index.html* is of no help either (we already got them in our browser before). Our final shot is the robots.txt file:
+
+```
+$ wget https://terratest.earth.local/robots.txt --no-check-certificate
+```
+
+The flag is to bypass SSL certificate check. Let's see the contents of our fresh file:
+
+```
+$ cat robots.txt
+User-Agent: *
+Disallow: /*.asp
+Disallow: /*.aspx
+Disallow: /*.bat
+Disallow: /*.c
+Disallow: /*.cfm
+Disallow: /*.cgi
+Disallow: /*.com
+Disallow: /*.dll
+Disallow: /*.exe
+Disallow: /*.htm
+Disallow: /*.html
+Disallow: /*.inc
+Disallow: /*.jhtml
+Disallow: /*.jsa
+Disallow: /*.json
+Disallow: /*.jsp
+Disallow: /*.log
+Disallow: /*.mdb
+Disallow: /*.nsf
+Disallow: /*.php
+Disallow: /*.phtml
+Disallow: /*.pl
+Disallow: /*.reg
+Disallow: /*.sh
+Disallow: /*.shtml
+Disallow: /*.sql
+Disallow: /*.txt
+Disallow: /*.xml
+Disallow: /testingnotes.*
+```
+
+The last line is of important to us. Unfortunately, we must guess the extension. htm, html, php and txt worth a try. Trying them we can see that *testingnotes.txt* really exists on the server:
+
+```
+$ wget https://terratest.earth.local/testingnotes.txt --no-check-certificate
+```
+
+Whoever is responsible for the security of this server is an amateur. Not only he could avoid the last entry by setting the read permissions to user only(600) but even without touching the permissions it could just ignore */testingnotes.** as _Disallow: /*.txt_ covers the */testingnotes.txt* file. It's an unexpected gift for us. Time to see the contents of the downloaded file.
+
+```
+$ cat testingnotes.txt
+Testing secure messaging system notes:
+*Using XOR encryption as the algorithm, should be safe as used in RSA.
+*Earth has confirmed they have received our sent messages.
+*testdata.txt was used to test encryption.
+*terra used as username for admin portal.
+Todo:
+*How do we send our monthly keys to Earth securely? Or should we change keys weekly?
+*Need to test different key lengths to protect against bruteforce. How long should the key be?
+*Need to improve the interface of the messaging interface and the admin panel, it's currently very basic.
+```
+
+**VERY** useful. Let's see the notes one by one:
+
+- Using XOR encryption as the algorithm, should be safe as used in RSA.
+
+Laughing in undergraduate CS. XOR is completely reversible and you can extract the "key" if you have the input and the output. Completely irrelevant for RSA. Also, the author of the notes seems that does not know anything about symmetric or asymmetric cryptography.
+
+- Earth has confirmed they have received our sent messages.
+
+Hard to believe, if they have received they would have changed the encryption scheme.
+
+- testdata.txt was used to test encryption.
+
+Thanks for the info!
+
+- terra used as username for admin portal.
+
+Another very useful information.
+
+
+About their todo list, we again see that they don't know anything about cryptography. They need some basic lessons! Hopefully, we are going to provide them one. About the interface, yes it's very basic but it can do our job. Thanks in advance!
+
 
