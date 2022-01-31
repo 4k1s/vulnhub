@@ -274,4 +274,22 @@ Another very useful information.
 
 About their todo list, we again see that they don't know anything about cryptography. They need some basic lessons! Hopefully, we are going to provide them one. About the interface, yes it's very basic but it can do our job. Thanks in advance!
 
+We can download testdata.txt and see what's inside:
+
+```
+$ wget https://terratest.earth.local/testdata.txt --no-check-certificate
+```
+
+Success.
+
+```
+$ cat testdata.txt
+According to radiometric dating estimation and other evidence, Earth formed over 4.5 billion years ago. Within the first billion years of Earth's history, life appeared in the oceans and began to affect Earth's atmosphere and surface, leading to the proliferation of anaerobic and, later, aerobic organisms. Some geological evidence indicates that life may have arisen as early as 4.1 billion years ago.
+```
+
+Ok, they used this text with a message key to produce an encrypt message. From the website we can see that the encrypted message is "2402111b1a...80a0e5a". Fiddling a bit with the form we see that this is really a simple XOR schema. As *(A xor A)=0* for example, Setting the message and message key both to the string "abc" we get an output of "000000". We observe that each string is converted to hex byte by byte and xored. The output is in hex. Whey don't know the key, **K**, but we know that $$msg $\veebar$ key = output$$. Consequently, $$(msg $\veebar$  msg) $\veebar$ key = msg $\veebar$ output => 0 $\veebar$ key = msg $\veebar$ output => key= msg $\veebar$ output$$
+
+So, to find the key we must XOR the message with the output. We know the message, which is the content of *testdata.txt* and the encrypted message (output) form the website("2402111b1a...80a0e5a"). We first convert the message from ASCII to hex and the xor it with output.
+
+
 
