@@ -289,7 +289,56 @@ According to radiometric dating estimation and other evidence, Earth formed over
 
 Ok, they used this text with a message key to produce an encrypt message. From the website we can see that the encrypted message is "2402111b1a...80a0e5a". Fiddling a bit with the form we see that this is really a simple XOR schema. As *(A xor A)=0* for example, Setting the message and message key both to the string "abc" we get an output of "000000". We observe that each string is converted to hex byte by byte and xored. The output is in hex. Whey don't know the key, **K**, but we know that $$msg $\veebar$ key = output$$. Consequently, $$(msg $\veebar$  msg) $\veebar$ key = msg $\veebar$ output => 0 $\veebar$ key = msg $\veebar$ output => key= msg $\veebar$ output$$
 
-So, to find the key we must XOR the message with the output. We know the message, which is the content of *testdata.txt* and the encrypted message (output) form the website("2402111b1a...80a0e5a"). We first convert the message from ASCII to hex and the xor it with output.
+So, to find the key we must XOR the message with the output. We know the message, which is the content of *testdata.txt* and the encrypted message (output) form the website("2402111b1a...80a0e5a"). We first convert the message from ASCII to hex and the xor it with output. Finally, we convert the xored result to ASCII. This task can be easily carried out. We are going to use python3, but any interpreted language or bash can do the job well. Another solution is to use online help from websites, for example [rapidtables.com](https://www.rapidtables.com/convert/number/)
+
+Let's see the python script:
+
+```
+#!/usr/bin/python3
+
+import sys
+
+def main():
+    if (len(sys.argv)!=3):
+        print('Correct syntax is getKey <message> <output>')
+        return
+
+    msg=sys.argv[1]
+    out=sys.argv[2]
+
+    key=''    
+    for i in range(len(msg)):
+        op1=ord(msg[i])
+        op2=int(out[2*i:2*i+2], 16)
+        result=chr((op1^op2))
+        key=key+result
+
+    print('')    
+    print(key)
+    return
+
+main()
+```
+
+By running it, we get the following
+
+```
+$ python3 getKey.py "According to radiometric dating estimation and other evidence, Earth formed over 4.5 billion years ago. Within the first billion years of Earth's history, life appeared in the oceans and began to affect Earth's atmosphere and surface, leading to the proliferation of anaerobic and, later, aerobic organisms. Some geological evidence indicates that life may have arisen as early as 4.1 billion years ago." "2402111b1a0705070a41000a431a000a0e0a0f04104601164d050f070c0f15540d1018000000000c0c06410f0901420e105c0d074d04181a01041c170d4f4c2c0c13000d430e0e1c0a0006410b420d074d55404645031b18040a03074d181104111b410f000a4c41335d1c1d040f4e070d04521201111f1d4d031d090f010e00471c07001647481a0b412b1217151a531b4304001e151b171a4441020e030741054418100c130b1745081c541c0b0949020211040d1b410f090142030153091b4d150153040714110b174c2c0c13000d441b410f13080d12145c0d0708410f1d014101011a050d0a084d540906090507090242150b141c1d08411e010a0d1b120d110d1d040e1a450c0e410f090407130b5601164d00001749411e151c061e454d0011170c0a080d470a1006055a010600124053360e1f1148040906010e130c00090d4e02130b05015a0b104d0800170c0213000d104c1d050000450f01070b47080318445c090308410f010c12171a48021f49080006091a48001d47514c50445601190108011d451817151a104c080a0e5a"
+
+earthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimatechangebad4humansearthclimat
+
+```
 
 
+We can see that the message key is replicated from the string *earthclimatechangebad4humans* until it matches the message length.
+
+Human beings have brains that are lazy in many ways. Memorizing is one of them. People prefer to use a single password for all services they want to access. For admin access, it's worth a try to use as password the above string. Message key can be though as a "password" by some, as it is used as a secret key (key for encryption/decryption in XOR, which is a crude symmetric scheme). We already know the username, it is *terra*,as mentioned in the  testingnotes.txt file . We go to the [login page](https://earth.local/admin/login) and try the credentials
+
+```
+terra : earthclimatechangebad4humans
+```
+
+We are in!
+
+### Escalation to user
 

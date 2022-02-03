@@ -16,7 +16,8 @@ def main():
         op2=int(out[2*i:2*i+2], 16)
         result=chr((op1^op2))
         key=key+result
-        
+
+    print('')
     print(key)
     return
 
