@@ -342,3 +342,43 @@ We are in!
 
 ### Escalation to user
 
+It's time for play now. Our first job is to see what count of account is this, which OS the server is running plus any other useful information we can get. By starting
+
+```
+whoami
+Command output: apache
+```
+
+```
+id
+Command output: uid=48(apache) gid=48(apache) groups=48(apache) 
+```
+
+So the account that runs the admin tool is apache itself. Nice, apache sometimes can run scripts with root privileges. Also, OS machine is *nix (unix type). Indeed:
+
+```
+uname -a
+Command output: Linux earth 5.14.9-200.fc34.x86_64 #1 SMP Thu Sep 30 11:55:35 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+```
+cat /etc/os-release
+CLI command:
+Command output: NAME=Fedora VERSION="34 (Server Edition)" ID=fedora VERSION_ID=34 VERSION_CODENAME="" PLATFORM_ID="platform:f34" PRETTY_NAME="Fedora 34 (Server Edition)" ANSI_COLOR="0;38;2;60;110;180" LOGO=fedora-logo-icon CPE_NAME="cpe:/o:fedoraproject:fedora:34" HOME_URL="https://fedoraproject.org/" DOCUMENTATION_URL="https://docs.fedoraproject.org/en-US/fedora/f34/system-administrators-guide/" SUPPORT_URL="https://fedoraproject.org/wiki/Communicating_and_getting_help" BUG_REPORT_URL="https://bugzilla.redhat.com/" REDHAT_BUGZILLA_PRODUCT="Fedora" REDHAT_BUGZILLA_PRODUCT_VERSION=34 REDHAT_SUPPORT_PRODUCT="Fedora" REDHAT_SUPPORT_PRODUCT_VERSION=34 PRIVACY_POLICY_URL="https://fedoraproject.org/wiki/Legal:PrivacyPolicy" VARIANT="Server Edition" VARIANT_ID=server 
+```
+
+A linux system, Fedora distro. 
+
+```
+ls /
+Command output: bin boot dev etc home lib lib64 media mnt opt proc root run sbin srv sys tmp usr var 
+```
+
+Classical linux HFS. Let as see what users exist in the server.
+
+```
+ls -l /home
+Command output: total 0 drwx------. 4 earth earth 141 Oct 13 00:23 earth 
+```
+
+So there is a user with nickname "earth". His home directory has correct permission (as expected), so we can't access anything in it.
