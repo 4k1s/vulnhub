@@ -382,3 +382,32 @@ Command output: total 0 drwx------. 4 earth earth 141 Oct 13 00:23 earth
 ```
 
 So there is a user with nickname "earth". His home directory has correct permission (as expected), so we can't access anything in it.
+
+Apache surely has access to the public html directories. Let's try it.
+
+```
+ls -a /var/www/
+Command output: . .. cgi-bin html 
+```
+
+```
+ls -a /var/www/cgi-bin
+Command output: . .. 
+```
+
+```
+ls -a /var/www/html
+Command output: . .. terratest.earth.local 
+```
+
+```
+ls -a /var/www/html/terratest.earth.local
+Command output: . .. index.html robots.txt testdata.txt testingnotes.txt 
+```
+
+cgi-bin directory is. unfortunately, empty. The host dir contains files that we have already downloaded and seen. No surprises and no new info.
+
+So what know? We must be honest here. This is the most difficult point. In real world, when someone looks for escalation to root or even user account he does not know if this is possible. The reason is simple. Linux machines are security oriented (always have been) without a misconfiguration or some other security pitfall is  is not possible for escalation to happen. This si especially true for servers that care about security. So an attacker can search forever without progress. That does not mean in real world unix type machines are invulnerable. Many of there are, it is just too difficult to be exploited, or simpler the attacker does not know if a vulnerability exists in the system. Which is very dishearting. This si the reason why persistence and patience are virtues for cybersecurity operations.
+
+Our target does not belong to this category. It is setup that way to contain at least one weak points, which waits to be exploited. So we can be encouraged by this and move on.
+
