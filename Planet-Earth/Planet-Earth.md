@@ -820,5 +820,52 @@ cat /var/earth_web/user_flag.txt
 
 So the user flag is **3353b67d6437f07ba7d34afd7d2fc27d**
 
+### Reversing any harmful changes done to the system
+
+Before recapping, we must reverse any changes or damage done to the target. We have changed the 
+root password, which is a very important thing. We should reverse the root access back to the old password. Generally speaking, someone shouldn't try to target machines that he does not own without authorization from the owner. Also, servers in production or otherwise should not be altered in any way. In case that they do the changes must be reversed as much as possible. If serious changes take place and we suspect that this may have an impact to a production server then owner must also be notified about the changes and duration that took place.
+
+Building good habits, we should reverse the change, that is, change the root password back to original. If this looks impossible at first to some (as we don't really know the original password), it really isn't. In fact it is very easy if someone has root access. Linux never saves user passwords anywhere; it saves only the hash of the passwords, which it creates only when the account is created or a password is changed. After that, it deletes thw password from its memory and the hashes stays in the disk. Every time someone is trying to login the OS hashes the password, compare the hashes and allow login if they match. All hashes are in the file */etc/shadow*. Fortunately, because Linux is a vary good architected OS and grained to detail, it keeps the previous changes in another file, namely */etc/shadow-*. Let us see this in reverse the password change:
+
+```
+[root@earth ~]# cd /etc
+cd /etc
+[root@earth etc]# ls shadow*
+ls shadow*
+shadow  shadow-
+[root@earth etc]# diff shadow shadow-
+diff shadow shadow-
+1c1
+< root:$6$GtLOO.2UDL4h2YMi$hsC6K1p34sZF44D1bF5tJ55WJ.LsqgCysmiUAMoAyRIcdnfEPMGeAdzVQD5ja6nSMPjxDzrYGvMTx8Glc78jd0:19052:0:99999:7:::
+---
+> root:$6$Jaen7ADnpnqrafSX$nebMBQLcNH1S2yEp883zJBSAm6sjNsj5neacek7C7EH9T1QkAk7NxnKi0v0tTjAJS2cCQChqiDCtDJl0M4ShD0:18913:0:99999:7:::
+[root@earth etc]# cp shadow- shadow
+cp shadow- shadow
+cp: overwrite 'shadow'? yes
+yes
+[root@earth etc]# diff shadow shadow-
+diff shadow shadow-
+[root@earth etc]#
+```
+
+Now */etc/shadow* has the hash of the original password. Indeed:
+
+```
+[root@earth etc]# exit
+exit
+exit
+bash-5.1$ whoami
+whoami
+apache
+bash-5.1$ su root
+su root
+Password: Earth
+
+su: Authentication failure
+```
+
+Perfect. We are done, we close the port we used as anchor to our system by *nc*.
+We could also try covering our tracks by cleaning apache log files in */var/log* but this is beyond the scope of getting the flags and also is closer to black hat hating, so let's skip this part.
+
 ### Conclusion
 
