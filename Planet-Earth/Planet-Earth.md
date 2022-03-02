@@ -757,7 +757,68 @@ If you have any feedback please contact me at SirFlash@protonmail.com
 [root@earth ~]#
 ```
 
+The root flag is **b0da9554d29db2117b02aa8b66ec492e**
+
 ### Back to user flag
 
+Now we can go to user directory to get the user flag.
+
+```
+[root@earth ~]# cd /home
+cd /home
+[root@earth home]# ls
+ls
+earth
+[root@earth home]# cd earth
+cd earth
+[root@earth earth]# ls
+ls
+[root@earth earth]# ls -a
+ls -a
+.   .bash_history  .bash_profile  .cache    .local
+..  .bash_logout   .bashrc        .lesshst  .vimrc
+```
+
+What is this? It seems there is no flag in the user home directory. Strange. There should be somewhere else. We can search all files by name. The root flag has a filename of *root_flag.txt* Probably user flag will have a filename of the same format, so it should be *user_flag.txt*, *earth_flag.txt* or similar. Lets search for filenames containing *_flag* :
+
+```
+..  .bash_logout   .bashrc        .lesshst  .vimrc
+[root@earth earth]# find / -name '_flag'
+find / -name '_flag'
+[root@earth earth]# find / -name '*_flag*'
+find / -name '*_flag*'
+/proc/sys/kernel/acpi_video_flags
+/proc/sys/net/ipv4/fib_notify_on_flag_change
+/proc/sys/net/ipv6/fib_notify_on_flag_change
+/sys/kernel/tracing/events/xfs/xfs_reflink_set_inode_flag
+/sys/kernel/tracing/events/xfs/xfs_reflink_unset_inode_flag
+/sys/kernel/tracing/events/xfs/xfs_reflink_set_inode_flag_error
+/sys/kernel/tracing/events/power/pm_qos_update_flags
+/sys/kernel/debug/tracing/events/xfs/xfs_reflink_set_inode_flag
+/sys/kernel/debug/tracing/events/xfs/xfs_reflink_unset_inode_flag
+/sys/kernel/debug/tracing/events/xfs/xfs_reflink_set_inode_flag_error
+/sys/kernel/debug/tracing/events/power/pm_qos_update_flags
+/sys/module/scsi_mod/parameters/default_dev_flags
+/root/root_flag.txt
+/var/earth_web/user_flag.txt
+/usr/include/linux/tty_flags.h
+/usr/include/bits/ss_flags.h
+/usr/local/lib/python3.9/site-packages/django/contrib/admin/migrations/0003_logentry_add_action_flag_choices.py
+/usr/local/lib/python3.9/site-packages/django/contrib/admin/migrations/__pycache__/0003_logentry_add_action_flag_choices.cpython-39.pyc
+/home/earth/.local/lib/python3.9/site-packages/django/contrib/admin/migrations/0003_logentry_add_action_flag_choices.py
+/home/earth/.local/lib/python3.9/site-packages/django/contrib/admin/migrations/__pycache__/0003_logentry_add_action_flag_choices.cpython-39.pyc
+```
+
+Aha! Our boy must be the file **/var/earth\_web/user\_flag.txt*
+
+```
+[root@earth earth]# cat /var/earth_web/user_flag.txt
+cat /var/earth_web/user_flag.txt
+[user_flag_3353b67d6437f07ba7d34afd7d2fc27d]
+[root@earth earth]#
+```
+
+So the user flag is **3353b67d6437f07ba7d34afd7d2fc27d**
 
 ### Conclusion
+
