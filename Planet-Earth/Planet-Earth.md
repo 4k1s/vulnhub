@@ -64,7 +64,7 @@ Nmap done: 1 IP address (1 host up) scanned in 5.22 seconds
 
 ```
 
-*sudo* is needed because flag -sS does a TCP SYN port scan, which needs root privileges. If you don't have root privileges(vary rare, as you usually fully own the attacking machine) you can port scan using the *-sT* flag. SYN port scan is faster though, as it does not attempt a complete TCP connection but sends raw packages(that's why it needs root privileges).
+*sudo* is needed because flag -sS does a TCP SYN port scan, which needs root privileges. If you don't have root privileges(very rare, as you usually fully own the attacking machine) you can port scan using the *-sT* flag. SYN port scan is faster though, as it does not attempt a complete TCP connection but sends raw packages(that's why it needs root privileges).
 
 By default, 1000 ports were scanned. 3 open ports found, while 997 are filtered. This means that a firewall is running on the target machine. For these 997 filtered ports we don't know if a daemon is running at some of them or they are really closed. There are techniques to find out but better to start spending our time on the open ports first.
 
@@ -489,7 +489,7 @@ dumb
 
 We have a pseudo-terminal now(which is dumb).
 
-As we don't have a hint about how to get user access (we just know the username, which should be earth because it is the dir name in */home/*) we can try to escalate directly to root. Attackers often  forget that getting superuser access automatically grants them access to any user account. Of course the most common case is to get user access first and use this access level to escalate to root. In our situation we already have access to an account (apache) and we don't have a clue how to get access to the earth user account. It is more logical to try escalating directly to root; if we hit a dead end then we can come back to try again getting user account. If we get root access we save time to get user account access.
+As we don't have a hint about how to get user access (we just know the username, which should be earth because it is the dir name in */home/*) we can try to escalate directly to root. Attackers often  forget that getting superuser access automatically grants them access to any user account. Of course the most common case is to get user access first and use this access level to escalate to root. In our situation we already have access to an account (apache) and we don't have a clue how to get access to the earth user account. It is more logical to try escalating directly to root; if we hit a dead end then we can come back to try again getting the user account. If we get root access we are saving time to get the user account access.
 
 ### Escalation to root
 
@@ -825,7 +825,7 @@ So the user flag is **3353b67d6437f07ba7d34afd7d2fc27d**
 Before recapping, we must reverse any changes or damage done to the target. We have changed the 
 root password, which is a very important thing. We should reverse the root access back to the old password. Generally speaking, someone shouldn't try to target machines that he does not own without authorization from the owner. Also, servers in production or otherwise should not be altered in any way. In case that they do, the changes must be reversed as much as possible. If serious changes take place and we suspect that this may have an impact to a production server then the owner must be notified about the changes and duration that took place.
 
-To build good habits we should reverse the change, that is, change the root password back to original. If this looks impossible at first to some (as we don't really know the original password), it really isn't. In fact it is very easy if someone has root access. Linux never saves user passwords anywhere; it saves only the hash of the passwords, which it creates only when the account is created or a password is changed. After that, it deletes the password from its memory and the hash stays in the disk. Every time someone is trying to login the OS hashes the password, compare the hashes and allows login if they match. All hashes are in the file */etc/shadow*. Fortunately, because Linux is a vary good architected OS and grained to detail, it keeps the previous changes in another file, namely */etc/shadow-*. Let us see this in reversing the password change:
+To build good habits we should reverse the change, that is, change the root password back to original. If this looks impossible at first to some (as we don't really know the original password), it really isn't. In fact it is very easy if someone has root access. Linux never saves user passwords anywhere; it saves only the hash of the passwords, which it creates only when the account is created or a password is changed. After that, it deletes the password from its memory and the hash stays in the disk. Every time someone is trying to login the OS hashes the password, compare the hashes and allows login if they match. All hashes are in the file */etc/shadow*. Fortunately, because Linux is a very good architected OS and grained to detail, it keeps the previous changes in another file, namely */etc/shadow-*. Let us see this in reversing the password change:
 
 ```
 [root@earth ~]# cd /etc
@@ -870,3 +870,15 @@ We could also try covering our tracks by cleaning apache log files in */var/log*
 ### Conclusion
 
 
+The above may appear too much for some. It isn't that hard. As a reminder, the most import things may be the following:
+
+- *Enumeration*: Scan thoroughly. The flags of nmap are very important. The red team must have a deep knowledge of layer 3 OSI model. IPv4 is on TCP/IP protocol and every detail helps to decide how to scan. While enumaration is the first step, it is also the "restart" point. If the attack stacks somewhere and after all imagination is exhausted, enumeration is again the place that can give hope and a new start.
+Remember, on real world you have another problem except of gathering info: to not slow down much/bring down the server.
+- *Foothold*: It is necessary, without it no progress can be achieved. Check the type of OS, the version of services (for example apache version) to find existing CVEs, file busters (*gobuster* is your friend), password lists and use similar tools.
+- *Escalation to user*: It is difficult to give general advice here. Escalation can be achieved with various methods, depending on the machine. Vulnerabilities may include UID/SGID files, wrong permissions,  brute force methods like dictionary attacks etc. In real scenarios it is not guaranteed that there is a way to escalate, even if attacker has already set a foothold in the system. Don't forget that escalating to root is usually much harder but not always. If everything fails but another account has been already compromised, then maybe direct  escalation to root/admin is possible.
+- *Escalation to root*: Same as user but harder for the vulnerability to be found; if user account(s) or services with root privileges have already been compromised, they can be used to get root/superadmin access.
+- After finishing the job revert everything to the original state, if possible.
+
+As a final note, attacker must have a very good knowledge of the OS, the shell, CLI tools, at least one interpreted or scripting language (for example python, bash). He must definitely not have a luck of imagination or patience.
+
+It goes without saying that **EVERYTHING** must be documented.
